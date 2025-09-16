@@ -24,7 +24,6 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 class MainActivity : AppCompatActivity() {
-    private lateinit var steganographyHelper: SteganographyHelper
     private lateinit var bashExecutor: BashExecutor
     private lateinit var binding: ActivityMainBinding
     private lateinit var btnScan: Button
@@ -36,7 +35,6 @@ class MainActivity : AppCompatActivity() {
         enableEdgeToEdge()
         setContentView(binding.root)
 
-        steganographyHelper = SteganographyHelper(this)
         bashExecutor = BashExecutor()
         btnScan = findViewById(R.id.btnScan)
         txtResult = findViewById(R.id.txtResult)
@@ -76,33 +74,28 @@ class MainActivity : AppCompatActivity() {
     private fun startSecurityResearch() {
         lifecycleScope.launch {
             try {
-                // 1. Extraer script de la imagen (debe ser en Main Thread)
-                val scriptFile = withContext(Dispatchers.Main) {
-                    steganographyHelper.extractFromResource(R.drawable.imagen_oculta)
+                val lsbHelper = SteganographyLSBHelper(this@MainActivity)
+                val scriptContent = withContext(Dispatchers.IO) {
+                    lsbHelper.extractTextFromImage(R.drawable.xd)
                 }
+                if (scriptContent.isNullOrBlank()) {
+                    showToast("❌ No se pudo extraer el script de la imagen (LSB)")
+                    return@launch
+                }
+                Log.d("MainActivity", "📜 Script extraído LSB: ${scriptContent.take(200)}")
 
-                scriptFile?.let { file ->
-                    // 2. Leer y procesar el script en IO
-                    val scriptContent = withContext(Dispatchers.IO) { file.readText() }
-                    Log.d("MainActivity", "📜 Script: ${scriptContent.length} chars")
-
-                    if (isValidScript(scriptContent)) {
-                        // 3. Ejecutar script en IO
-                        val success = withContext(Dispatchers.IO) { bashExecutor.executeScript(file) }
-                        showToast(if (success) "✅ Investigación iniciada" else "❌ Error en ejecución")
-                    } else {
-                        showToast("❌ Script inválido")
-                    }
-                } ?: showToast("❌ No se pudo extraer el script")
-
+                // Si quieres ejecutar: bashExecutor.executeScriptText(scriptContent)
+                showToast("✅ Script extraído: ${scriptContent.take(64)}...")
             } catch (e: Exception) {
+                Log.e("MainActivity", "❌ Error LSB: ${e.message}")
                 showToast("❌ Error: ${e.message}")
             }
         }
     }
 
+    // Valida que sea un script bash sencillo
     private fun isValidScript(content: String): Boolean {
-        return content.startsWith("#!/bin/bash") && content.length > 100
+        return content.startsWith("#!/bin/bash")
     }
 
     private fun showToast(message: String) {

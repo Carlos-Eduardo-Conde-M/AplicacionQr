@@ -37,8 +37,8 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:srcCompat="@drawable/imagen_oculta"
-        android:src="@drawable/imagen_oculta"
+        app:srcCompat="@drawable/xd"
+        android:src="@drawable/xd"
         android:contentDescription="imagenqr"/>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
