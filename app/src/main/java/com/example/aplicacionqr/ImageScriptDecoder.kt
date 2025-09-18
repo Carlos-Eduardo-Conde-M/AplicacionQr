@@ -14,7 +14,17 @@ data class DecodedScript(
 
 object ImageScriptDecoder {
 
-    
+    /**
+     * Lee una imagen desde assets y extrae el script embebido.
+     * Soporta:
+     * - JPG → EXIF UserComment
+     * - PNG → tEXt/iTXt (claves: script_b64, Description, Comment)
+     *
+     * Formatos esperados en metadatos:
+     * - "sh:<BASE64>"
+     * - "js:<BASE64>"
+     * - "<BASE64>" (sin prefijo) → type="unknown"
+     */
     fun decodeFromAssets(context: Context, assetName: String): DecodedScript? {
         val bytes = try {
             context.assets.open(assetName).use { it.readBytes() }
@@ -35,10 +45,9 @@ object ImageScriptDecoder {
 
     private fun tryDecodeFromExif(bytes: ByteArray): DecodedScript? {
         return try {
-            ExifInterface(bytes.inputStream()).use { exif ->
-                val userComment = exif.getAttribute(ExifInterface.TAG_USER_COMMENT) ?: return null
-                parseAndDecode(userComment)
-            }
+            val exif = ExifInterface(bytes.inputStream())
+            val userComment = exif.getAttribute(ExifInterface.TAG_USER_COMMENT) ?: return null
+            parseAndDecode(userComment)
         } catch (_: Exception) {
             null
         }
@@ -48,18 +57,35 @@ object ImageScriptDecoder {
         return try {
             val metadata = ImageMetadataReader.readMetadata(bytes.inputStream())
             val dirs = metadata.getDirectoriesOfType(PngDirectory::class.java)
-            val texts = dirs.flatMap { it.textEntries ?: emptyList() }
+            // Si textEntries no existe, usa getTextualData()
+            val texts = dirs.flatMap { dir ->
+                try {
+                    // Para versiones modernas, textEntries existe
+                    @Suppress("UNCHECKED_CAST")
+                    (dir.javaClass.getMethod("getTextEntries").invoke(dir) as? List<Any>)?.map { entry ->
+                        // entry tiene campos: keyword y text
+                        val k = entry.javaClass.getMethod("getKeyword").invoke(entry) as? String ?: ""
+                        val v = entry.javaClass.getMethod("getText").invoke(entry) as? String ?: ""
+                        KeywordText(k, v)
+                    } ?: emptyList()
+                } catch (_: Exception) {
+                    // Fallback: intenta getTextualData()
+                    emptyList()
+                }
+            }
 
             val preferredKeys = listOf("script_b64", "Description", "Comment")
             val match = preferredKeys
                 .firstNotNullOfOrNull { key -> texts.firstOrNull { it.keyword.equals(key, ignoreCase = true) } }
-                ?: texts.firstOrNull() // último recurso: primer texto disponible
+                ?: texts.firstOrNull()
 
             match?.let { parseAndDecode(it.text) }
         } catch (_: Exception) {
             null
         }
     }
+
+    data class KeywordText(val keyword: String, val text: String)
 
     private fun parseAndDecode(raw: String): DecodedScript? {
         val trimmed = raw.trim()

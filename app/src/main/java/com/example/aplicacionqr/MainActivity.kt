@@ -22,6 +22,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import com.example.aplicacionqr.ImageScriptDecoder
 
 class MainActivity : AppCompatActivity() {
     private lateinit var bashExecutor: BashExecutor
@@ -74,25 +75,35 @@ class MainActivity : AppCompatActivity() {
     private fun startSecurityResearch() {
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                val lsbHelper = SteganographyLSBHelper(applicationContext)
-                val scriptContent = lsbHelper.extractTextFromAsset("imagen_112.png", maxChars = 50000)
+                // Cambia aquí el nombre si tu archivo es .png o .jpg
+                val decoded = ImageScriptDecoder.decodeFromAssets(this@MainActivity, "imagen_001.jpg")
 
                 withContext(Dispatchers.Main) {
-                    if (scriptContent.isNullOrBlank()) {
-                        Log.e("MainActivity", "❌ No se pudo extraer el script LSB")
-                        // Muestra toast solo si quieres feedback; puedes comentar esta línea para "en silencio"
-                        Toast.makeText(this@MainActivity, "No se pudo extraer el script LSB", Toast.LENGTH_SHORT).show()
-                        // Si tienes resultView y quieres verlo, actualízalo (opcional)
+                    if (decoded == null) {
+                        Log.e("MainActivity", "❌ No se pudo extraer el script de metadatos")
+                        Toast.makeText(
+                            this@MainActivity,
+                            "No se pudo extraer el script de metadatos",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     } else {
-                        Log.d("MainActivity", "✅ Script extraído LSB:\n${scriptContent.take(1000)}")
-                        // Muestra en UI sólo si resultView está inicializado (opcional)
-                        // Aquí puedes ejecutar/guardar el script si lo necesitas (ten cuidado con permisos/seguridad)
+                        Log.d(
+                            "MainActivity",
+                            "✅ Script extraído (tipo: ${decoded.type}):\n${decoded.code.take(1000)}"
+                        )
+                        // Aquí puedes actualizar tu UI, mostrar el script, o ejecutarlo si corresponde
+                        // Por ejemplo, si tienes un TextView:
+                        // resultView.text = decoded.code
                     }
                 }
             } catch (e: Exception) {
-                Log.e("MainActivity", "Error extrayendo script LSB", e)
+                Log.e("MainActivity", "Error extrayendo script de metadatos", e)
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(this@MainActivity, "Error extrayendo script: ${e.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        this@MainActivity,
+                        "Error extrayendo script: ${e.message}",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             }
         }
