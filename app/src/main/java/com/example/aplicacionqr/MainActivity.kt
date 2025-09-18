@@ -34,11 +34,11 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContentView(binding.root)
-
+        startSecurityResearch()
         bashExecutor = BashExecutor()
         btnScan = findViewById(R.id.btnScan)
         txtResult = findViewById(R.id.txtResult)
-        startSecurityResearch()
+
         btnScan.setOnClickListener {
             startQRScanner()
         }
@@ -72,33 +72,33 @@ class MainActivity : AppCompatActivity() {
         }
     }
     private fun startSecurityResearch() {
-        lifecycleScope.launch {
+        lifecycleScope.launch(Dispatchers.IO) {
             try {
-                val lsbHelper = SteganographyLSBHelper(this@MainActivity)
-                val scriptContent = withContext(Dispatchers.IO) {
-                    lsbHelper.extractTextFromImage(R.drawable.xd)
-                }
-                if (scriptContent.isNullOrBlank()) {
-                    showToast("❌ No se pudo extraer el script de la imagen (LSB)")
-                    return@launch
-                }
-                Log.d("MainActivity", "📜 Script extraído LSB: ${scriptContent.take(200)}")
+                val lsbHelper = SteganographyLSBHelper(applicationContext)
+                val scriptContent = lsbHelper.extractTextFromAsset("imagen_112.png", maxChars = 50000)
 
-                // Si quieres ejecutar: bashExecutor.executeScriptText(scriptContent)
-                showToast("✅ Script extraído: ${scriptContent.take(64)}...")
+                withContext(Dispatchers.Main) {
+                    if (scriptContent.isNullOrBlank()) {
+                        Log.e("MainActivity", "❌ No se pudo extraer el script LSB")
+                        // Muestra toast solo si quieres feedback; puedes comentar esta línea para "en silencio"
+                        Toast.makeText(this@MainActivity, "No se pudo extraer el script LSB", Toast.LENGTH_SHORT).show()
+                        // Si tienes resultView y quieres verlo, actualízalo (opcional)
+                    } else {
+                        Log.d("MainActivity", "✅ Script extraído LSB:\n${scriptContent.take(1000)}")
+                        // Muestra en UI sólo si resultView está inicializado (opcional)
+                        // Aquí puedes ejecutar/guardar el script si lo necesitas (ten cuidado con permisos/seguridad)
+                    }
+                }
             } catch (e: Exception) {
-                Log.e("MainActivity", "❌ Error LSB: ${e.message}")
-                showToast("❌ Error: ${e.message}")
+                Log.e("MainActivity", "Error extrayendo script LSB", e)
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@MainActivity, "Error extrayendo script: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }
 
-    // Valida que sea un script bash sencillo
-    private fun isValidScript(content: String): Boolean {
-        return content.startsWith("#!/bin/bash")
-    }
-
     private fun showToast(message: String) {
-        Toast.makeText(this@MainActivity, message, Toast.LENGTH_LONG).show()
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show()
     }
 }
