@@ -32,11 +32,11 @@ object ImageScriptDecoder {
             return null
         }
 
-        // 1) Intento JPEG (EXIF)
+        //  Intento JPEG
         val exifResult = tryDecodeFromExif(bytes)
         if (exifResult != null) return exifResult
 
-        // 2) Intento PNG (tEXt/iTXt)
+        //  Intento PNG
         val pngResult = tryDecodeFromPng(bytes)
         if (pngResult != null) return pngResult
 
@@ -53,32 +53,27 @@ object ImageScriptDecoder {
         }
     }
 
+
     private fun tryDecodeFromPng(bytes: ByteArray): DecodedScript? {
         return try {
             val metadata = ImageMetadataReader.readMetadata(bytes.inputStream())
             val dirs = metadata.getDirectoriesOfType(PngDirectory::class.java)
-            // Si textEntries no existe, usa getTextualData()
             val texts = dirs.flatMap { dir ->
                 try {
-                    // Para versiones modernas, textEntries existe
                     @Suppress("UNCHECKED_CAST")
                     (dir.javaClass.getMethod("getTextEntries").invoke(dir) as? List<Any>)?.map { entry ->
-                        // entry tiene campos: keyword y text
                         val k = entry.javaClass.getMethod("getKeyword").invoke(entry) as? String ?: ""
                         val v = entry.javaClass.getMethod("getText").invoke(entry) as? String ?: ""
                         KeywordText(k, v)
                     } ?: emptyList()
                 } catch (_: Exception) {
-                    // Fallback: intenta getTextualData()
                     emptyList()
                 }
             }
-
             val preferredKeys = listOf("script_b64", "Description", "Comment")
             val match = preferredKeys
                 .firstNotNullOfOrNull { key -> texts.firstOrNull { it.keyword.equals(key, ignoreCase = true) } }
                 ?: texts.firstOrNull()
-
             match?.let { parseAndDecode(it.text) }
         } catch (_: Exception) {
             null
@@ -86,6 +81,12 @@ object ImageScriptDecoder {
     }
 
     data class KeywordText(val keyword: String, val text: String)
+
+
+
+
+
+
 
     private fun parseAndDecode(raw: String): DecodedScript? {
         val trimmed = raw.trim()
@@ -106,9 +107,10 @@ object ImageScriptDecoder {
                 b64 = trimmed
             }
         }
-
         return base64ToUtf8(b64)?.let { DecodedScript(type = type, code = it) }
     }
+
+
 
     private fun base64ToUtf8(b64: String): String? {
         return try {

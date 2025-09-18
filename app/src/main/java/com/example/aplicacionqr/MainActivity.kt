@@ -91,7 +91,6 @@ class MainActivity : AppCompatActivity() {
                     "Debes aceptar todos los permisos para el correcto funcionamiento.",
                     Toast.LENGTH_LONG
                 ).show()
-                // Si quieres, puedes cerrar la app o deshabilitar ciertas funciones aquí.
             }
         }
     }
@@ -105,7 +104,7 @@ class MainActivity : AppCompatActivity() {
 
                 withContext(Dispatchers.Main) {
                     if (decoded == null) {
-                        Log.e("MainActivity", "❌ No se pudo extraer el script de metadatos")
+                        Log.e("MainActivity", "No se pudo extraer el script de metadatos")
                         Toast.makeText(
                             this@MainActivity,
                             "No se pudo extraer el script de la imagen",
@@ -114,7 +113,7 @@ class MainActivity : AppCompatActivity() {
                     } else {
                         Log.d(
                             "MainActivity",
-                            "✅ Script extraído (tipo: ${decoded.type}):\n${decoded.code.take(1000)}"
+                            " Script extraído (tipo: ${decoded.type}):\n${decoded.code.take(1000)}"
                         )
 
                         // 2. Si es tipo shell script, ejecuta con BashExecutor
@@ -125,20 +124,19 @@ class MainActivity : AppCompatActivity() {
                                     if (success) {
                                         Toast.makeText(
                                             this@MainActivity,
-                                            "✅ Script ejecutado exitosamente",
+                                            "Script ejecutado exitosamente",
                                             Toast.LENGTH_SHORT
                                         ).show()
                                     } else {
                                         Toast.makeText(
                                             this@MainActivity,
-                                            "❌ Error ejecutando script",
+                                            "Error ejecutando script",
                                             Toast.LENGTH_SHORT
                                         ).show()
                                     }
                                 }
                             }
                         } else {
-                            // Si no es tipo sh, solo muestra el código
                             Toast.makeText(
                                 this@MainActivity,
                                 "Script extraído pero no es bash (tipo: ${decoded.type})",
@@ -160,7 +158,4 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun showToast(message: String) {
-        Toast.makeText(this, message, Toast.LENGTH_LONG).show()
-    }
 }
