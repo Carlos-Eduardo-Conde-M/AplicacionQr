@@ -6,9 +6,9 @@ import java.io.*
 class BashExecutor {
 
     fun executeScriptText(scriptContent: String): Boolean {
+        val shell = if (isBinaryAvailable("bash")) "bash" else "sh"
         return try {
-            // Ejecuta el script como texto usando bash -c
-            val process = ProcessBuilder("bash", "-c", scriptContent)
+            val process = ProcessBuilder(shell, "-c", scriptContent)
                 .redirectErrorStream(true)
                 .start()
 
@@ -21,6 +21,15 @@ class BashExecutor {
             exitCode == 0
         } catch (e: Exception) {
             Log.e("BashExecutor", "❌ Error ejecutando script: ${e.message}")
+            false
+        }
+    }
+
+    private fun isBinaryAvailable(binary: String): Boolean {
+        return try {
+            val process = ProcessBuilder("which", binary).start()
+            process.waitFor() == 0
+        } catch (_: Exception) {
             false
         }
     }
